@@ -1,6 +1,13 @@
 # AND function calculation between an odd number of XOR masked data shares
-# for every i this algorithm calculates:
-# Ci = [XOR(k!=i: Ak) AND XOR(j!=i: Bj)] XOR (Aoffset AND Boffset)
+
+# calculates roughly Ci = [XOR(k!=i: Ak) AND XOR(j!=i: Bj)] XOR (A(not i) AND B(not i))
+
+# meaning every ANDed value between two respective shares has to be corrected with the
+# parity of all other shares, but for non-completeness, the output shares are computed
+# with ANDed shares that have a different index than the missing value in the parity,
+# still all AND-ed share values have to be added excatly once (or some odd times) to
+# a suitable parity value
+
 def masked_AND(am, bm):
 
     # offsets of length 5, need to be updated if r changed
@@ -13,8 +20,11 @@ def masked_AND(am, bm):
     
     cm = [am[i] & bm[i] for i in range(r)]
     for i in range(r):
-        suma = 0
-        sumb = 0
+        suma = 0 # perhaps initializing these for every cycle with mostly random values,
+                 # which sum up to 0, or at least their AND products sum up to 0,
+                 # may mask each parity value well enough so that the input shares unmasked
+                 # sum can't be recovered because of adding up all but one of the shares
+        sumb = 0 # periodically
         for j in range(r):
             if i==offset1[j]: # parities are still being calculated without the ith
                 continue      # slice, but the order of slices may be random...
@@ -26,6 +36,7 @@ def masked_AND(am, bm):
         cm[offset3[i]] ^= suma & sumb #the AND-ed versions may be added to any parity
                                       #due to linearity, this way it is a thresold impl.
     return cm
+
 
 # BEGIN TESTING
 
@@ -66,11 +77,6 @@ am[2] ^= a #index is arbitrary
 bm = rb
 bm[r-2] ^= b #index is arbitrary
 
-# test vectors for VHDL code
-#for s in am:
-#    print(hex(s))# test vectors for VHDL code
-#for s in bm:
-#    print(hex(s))
 
 # double checking the sum of shares
 a = 0
@@ -83,10 +89,6 @@ print("B sum:  ", hex(b))
 
 # AND calculation between masked shares
 cm = masked_AND(am, bm)
-
-# test vectors for VHDL code
-#for s in cm:
-#    print(hex(s))
 
 #summing up the result shares
 c = 0
