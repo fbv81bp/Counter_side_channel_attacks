@@ -1,6 +1,6 @@
 # AND function calculation between an odd number of XOR masked data shares
 
-# calculates roughly Ci = [XOR(k!=i: Ak) AND XOR(j!=i: Bj)] XOR (A(not i) AND B(not i))
+# calculates roughly Ci = [(XORsum(k!=i): Ak) AND (XORsum(k!=i): Bk)] XOR (Ak(k!=i) AND Bk(k!=i))
 
 # meaning every ANDed value between two respective shares has to be corrected with the
 # parity of all other shares, but for non-completeness, the output shares are computed
