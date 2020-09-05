@@ -17,13 +17,14 @@
 # this is valid for all individual shares too: any of them can be expressed as the 
 # original value xor sth
 # however that "sth" - the parity of the rest(!) - is being computed here and might be
-# obtained through the side channel!
+# obtained through the side channel: which however shouldn't matter, because every time
+# the original value XOR a differet mask is the result
 
 from random import randint as rdi 
 
 def masked_AND(am, bm):
 
-    # any offset series should be allowed
+    # mixing offsets: any offset series should be allowed
     offset = [i for i in range(r)]
     for i in range(r):
         swap0 = rdi(0, r-1)
@@ -32,27 +33,35 @@ def masked_AND(am, bm):
     
     # AND values of respective bits to be corrected by parities
     cm = [am[i] & bm[i] for i in range(r)]
+    
     # initializing summing - maybe randomizing helps a bit to mask the parities
     suma = 0
     sumb = 0
+    
     # initializing parity: data at first offset is omitted
     for i in range(r-1):
         suma ^= am[offset[i+1]]
         sumb ^= bm[offset[i+1]]
+    
     # calculating diverse parities in a rolling manner: only subtracting and adding 1-1 share at a time
     for i in range(r-1):
+        
         # needs an offset so that it fulfills non-completeness, a displacement by -1 is more than nothing
         # any offset does the trick, as long as the cm value does not have the index of the missing
         # value in the parity
         cm[offset[i]-1] ^= suma & sumb
+        
         # subtracting the next value to be missing from the parity at first in order not to unmask original value
         suma ^= am[offset[i+1]]
         sumb ^= bm[offset[i+1]]
+        
         # adding the currently missed value only afterwards - in hardware these prev. and next two operations may
         # glitch: if the addition is faster than the subtraction, the unmasked value appears for a short time!!
         # a fully asynchronous implementation is thus not suggested...
         suma ^= am[offset[i]]
         sumb ^= bm[offset[i]]
+    
+    #correcting the AND-ed value on the last offset with its parities
     cm[offset[r-1]-1] ^= suma & sumb
     
     return cm
