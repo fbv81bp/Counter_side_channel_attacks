@@ -1,6 +1,6 @@
 # AND function calculation between an odd number of XOR masked data shares
 
-# calculates roughly Ci = [XOR(k!=i: Ak) AND XOR(j!=i: Bj)] XOR (A(not i) AND B(not i))
+# calculates roughly Ci = [(XORsum(k!=i): Ak) AND (XORsum(k!=i): Bk)] XOR (Ak(k!=i) AND Bk(k!=i))
 
 # meaning every ANDed value between two respective shares has to be corrected with the
 # parity of all other shares, but for non-completeness, the output shares are computed
@@ -13,18 +13,17 @@ def masked_AND(am, bm):
     # offsets of length 5, need to be updated if r changed
     offset1 = [1,3,0,2,4] # any arbitrary order is allowed in the parity
     offset2 = [3,1,4,0,2] # calculationt to shuffle power consumption traces
+    
     offset3 = [3,4,1,0,2] # anything but the position itself is allowed!
                           # random shuffled is the best: it enforces summing
                           # up the measurement results and searching for data
                           # in much greater noise
-    
+    #AND-ed values
     cm = [am[i] & bm[i] for i in range(r)]
+    #parities
     for i in range(r):
-        suma = 0 # perhaps initializing these for every cycle with mostly random values,
-                 # which sum up to 0, or at least their AND products sum up to 0,
-                 # may mask each parity value well enough so that the input shares unmasked
-                 # sum can't be recovered because of adding up all but one of the shares
-        sumb = 0 # periodically
+        suma = 0
+        sumb = 0
         for j in range(r):
             if i==offset1[j]: # parities are still being calculated without the ith
                 continue      # slice, but the order of slices may be random...
@@ -33,6 +32,7 @@ def masked_AND(am, bm):
             if i==offset2[j]:
                 continue
             sumb ^= bm[offset2[j]]
+        #correcting AND with parities
         cm[offset3[i]] ^= suma & sumb #the AND-ed versions may be added to any parity
                                       #due to linearity, this way it is a thresold impl.
     return cm
