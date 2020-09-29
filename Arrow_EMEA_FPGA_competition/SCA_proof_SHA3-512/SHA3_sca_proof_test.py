@@ -34,7 +34,7 @@ Rewritten by: Balazs Valer Fekete
 Github: fbv81bp
 Last updated: 28.09.2020
 Modifications: removed NumPy dependency, added masked AND calculation for possible side channel attck protection
-Description: this code is meant to test the masking of the AND gate results in the very same output regardless of
+Description: this code is meant to test if the masking of the AND gate results in the very same output regardless of
     the number or content of XOR mask values
 '''
 
