@@ -128,19 +128,23 @@ def and_arrays(arr1, arr2):
     return [arr1[i] & arr2[i] for i in range(len(arr1))]
 
 def and_masked_arrays(am, bm):
-    # mixing offsets: any offset series should be allowed
-    offset = [1, 2, 0, 4, 3]
+    # mixing offsets: any offset series should be allowed: orderes, static random, dynamically random which is static during a single run
+    
+    offset = [m for m in range(shares)]
+    
+    #offset = [1, 2, 5, 0, 4, 6, 3] #may be manually updated if contains all numbers "<shares"
+    
     # AND values of respective bits to be corrected by parities
-    cm = [and_arrays(am[i], bm[i]) for i in range(masks)]
+    cm = [and_arrays(am[i], bm[i]) for i in range(shares)]
     # initializing summing - maybe randomizing helps a bit to mask the parities
     suma = [0 for m in range(w)]
     sumb = [0 for m in range(w)]
     # initializing parity: data at first offset is omitted
-    for i in range(masks-1):
+    for i in range(shares-1):
         suma = xor_arrays(suma, am[offset[i+1]])
         sumb = xor_arrays(sumb, bm[offset[i+1]])
     # calculating diverse parities in a rolling manner: only subtracting and adding 1-1 share at a time
-    for i in range(masks-1):
+    for i in range(shares-1):
         # needs an offset so that it fulfills non-completeness, a displacement by -1 is more than nothing
         # any offset does the trick, as long as the cm value does not have the index of the missing
         # value in the parity
@@ -154,20 +158,20 @@ def and_masked_arrays(am, bm):
         suma = xor_arrays(suma, am[offset[i]])
         sumb = xor_arrays(sumb, bm[offset[i]])
     #correcting the AND-ed value on the last offset with its parities
-    cm[offset[masks-1]-1] = xor_arrays(cm[offset[masks-1]-1], and_arrays(suma, sumb))
+    cm[offset[shares-1]-1] = xor_arrays(cm[offset[shares-1]-1], and_arrays(suma, sumb))
     return cm
 
 def chi(array, w=64):
     # Bitwise transformation of each row according to a nonlinear function
-    array_prime = [[[[0 for i in range(w)] for j in range(5)] for k in range(5)] for m in range(masks)]
+    array_prime = [[[[0 for i in range(w)] for j in range(5)] for k in range(5)] for m in range(shares)]
     for x in range(5):
         for y in range(5):
-            negated = [[0 for i in range(w)] for m in range(masks)]
-            for m in range(masks):
+            negated = [[0 for i in range(w)] for m in range(shares)]
+            for m in range(shares):
                 negated[m] = neg_array(array[m][(x + 1) % 5][y])
-            array_piece = [array[m][(x + 2) % 5][y] for m in range(masks)]
+            array_piece = [array[m][(x + 2) % 5][y] for m in range(shares)]
             anded = and_masked_arrays(negated, array_piece)    
-            for m in range(masks):
+            for m in range(shares):
                 array_prime[m][x][y] = xor_arrays(array[m][x][y], anded[m])
     return array_prime
 
@@ -182,12 +186,12 @@ def iota(array, round_index, w=64):
 def keccak(state):
     # The keccak function defines one transformation round, SHA-3 has 24 in total
     for round_index in range(24):
-        for i in range(masks):
+        for i in range(shares):
             state[i] = theta(state[i])
             state[i] = rho(state[i])
             state[i] = pi(state[i])
         state = chi(state)
-        for i in range(masks):
+        for i in range(shares):
             state[i] = iota(state[i], round_index)
     return state
 
@@ -202,12 +206,24 @@ def squeeze(array):
     return hash >> 1600-512
 
 
-#Number of masks (has to be odd)
-masks = 5
+# Number of shares has to be odd for masked AND to function (here up to 9, because "mask" has yet has 8 entries)
+# This parameter is what should* control strength against side channel analysis.
+# (*Should, because it is not yet a publicly reviewed implementation, but based on my idea - fbv81bp.)
+shares = 9
+#shares = 7
+#shares = 5
+#shares = 3
+
+# Masking values: any random numbers to create shares with (extend with any entries for "shares" above 9)
 mask = [0x134578031870153130875420637835986125107782356039812751762002896308574171287013589329817527812803425780932589215686015380325801268160254073269591,
         0x129875483923284795493878198345894837278934598774839291878293459875849000086518652754562754167461679065068516744722574471675964056340252123426253,
-        0x473452324765376475,
-        0x543645246536475867586497853674564]
+        0x40000000000000000000073452324765376475,
+        0x543645246536475867586497853674564,
+        0x87654321,
+        0xabcdef987654567898765abcdef,
+        0x76756453542354658768769758647536435465768754321302110123465790465786745634,
+        0xcdf]
+mask = mask [:shares-1]
 
 # Calculate capacity and rate from outbits
 outbits = 512
@@ -219,16 +235,19 @@ padded = 0x000666656463626100000000000000000000000000000000000000000000000000000
 
 sponge_rounds = 1 #len(padded) // rate
 
-mask.append(padded ^ mask[0] ^ mask[1] ^ mask[2] ^ mask[3])
+last_mask = padded
+for i in range(shares - 1):
+    last_mask ^= mask[i]
+mask.append(last_mask)
 
-for i in range(masks):
+for i in range(shares):
     mask[i] <<= 1600-576
     mask[i] = hex2binarray(mask[i], 1600)
     mask[i] = mask[i][::-1]
 
-state = [[[[0 for i in range(w)] for j in range(5)] for k in range(5)] for m in range(masks)]
+state = [[[[0 for i in range(w)] for j in range(5)] for k in range(5)] for m in range(shares)]
 
-for n in range(masks):
+for n in range(shares):
     current_string = mask[n][0 : rate]
     array = string_to_array(current_string, w=64)
     state[n] = [[[state[n][k][j][i] ^ array[k][j][i] for i in range(w)] for j in range(5)] for k in range(5)]
@@ -237,5 +256,8 @@ state = keccak(state) # single round because of short test message
 
 # The 'squeeze' phase outputs the final hash value
 print()
-print('hash result:', hex(squeeze(state[0]) ^ squeeze(state[1]) ^ squeeze(state[2]) ^ squeeze(state[3]) ^ squeeze(state[4])))
+result = 0
+for i in range(shares):
+    result ^= squeeze(state[i])
+print('hash result:', hex(result))
 
