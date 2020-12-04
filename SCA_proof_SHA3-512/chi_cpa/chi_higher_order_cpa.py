@@ -145,7 +145,7 @@ for i in range(10): # guessing 10 different random keys, while hypothesises only
 
     #calculating correlations with diverse hypothesises on assumed key values
     print('correlating share 0')
-    most_likely_key = [0,0,0]
+    most_likely_key = 0
     highest_correlation = 0
     k=0
     for assumed_key_share0 in range(32):
