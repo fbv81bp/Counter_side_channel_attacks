@@ -7,3 +7,13 @@
 * and_offset.py may already be SCA proof, in fact it hopefully is a threshold implementation, with more or less randomly shufflable computations - these make analysis more noisy, if the attacker doesn't know which piece of trace belongs to which share, and thus has to sum up some trace pieces, like if they were implemented in parallel hardware and calculate with those algorithmically noisy results.
 
 * and_offset_rolling.py implements a the previous offseted version a little bit simplified based on the fact that parity is like a "rolling hash", which can be updated element wise, and doesn't need the full recomputation for each AND-ed bit's corrections.
+
+## A masked AES S-box
+
+* should protect against first order attacks
+* is implemented with plain memory, requiring 64k entries thus (an original address byte and a randomized address byte yield 16 bits of address space)
+
+## A boolean masked Montgomery exponentiation ladder
+
+* its based on the accompanying scientific publication (pdf)...
+* ...which states this algorithm should protect against first order side channel attacks, if registers don't leak
