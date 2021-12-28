@@ -8,6 +8,8 @@
 
 * and_offset_rolling.py implements a the previous offseted version a little bit simplified based on the fact that parity is like a "rolling hash", which can be updated element wise, and doesn't need the full recomputation for each AND-ed bit's corrections.
 
+* rolled_out_masked_and.py describes if the parities weren't fully calculated, because they actually create the mask of the very last non-used share... insted, after re-reading the accompanying pdf, Glitch Resistant Masking Schemes, I got suspicious, that any odd number of shares can be used as a threshold implementation similar to the equation is the pdf, if I rolled out the compact, parity based equaton, what I described. And in this unrolled case the circuit never even ever gets close to disclosing one or another mask of any share.
+
 ## A masked AES S-box
 
 * should protect against first order attacks
